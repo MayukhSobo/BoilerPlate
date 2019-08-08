@@ -17,8 +17,15 @@ def main(ctx):
     type=click.Path(exists=True, resolve_path=True),
     help='Path to the config file that loads the configuration for the project'
 )
+@click.option(
+    '-s',
+    '--save',
+    type=click.Choice(['y', 'yes', 'n', 'no']),
+    default='y',
+    help='Mention if we need to process and save the image into a directory'
+)
 @click.pass_context
-def load(ctx, config_file):
+def load(ctx, config_file, save):
     """
     It loads the configuration files and process the data
     gathered from the data directories mentioned in the
@@ -30,7 +37,9 @@ def load(ctx, config_file):
     """
     conf_obj = ctx.obj['CONF']
     datafiles = _load(config_file, conf_obj=conf_obj)
-    click.echo(datafiles)
+    print(save, type(save))
+    # // TODO: Display the file stats if mentioned
+    # click.echo(datafiles)
 
 
 def _load(config_file, **kwargs):

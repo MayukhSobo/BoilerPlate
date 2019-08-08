@@ -25,6 +25,8 @@ from typing import (
     Dict, Union, Any
 )
 from PIL import Image
+
+
 # from tqdm import tqdm
 # import click
 
@@ -41,7 +43,9 @@ def resize_and_save(filename, output_dir, size):
 
 
 def _combined_image_labels(data_dir: Iterator[Path],
-                           file_type: str, labels: Dict[str, int]=None, **kwargs) -> Tuple[List[Union[Path, Any]], ...]:
+                           file_type: str,
+                           labels: Dict[str, int] = None,
+                           **kwargs) -> Tuple[List[Union[Path, Any]], ...]:
     """
     It combines the file ids and class labels according to `labels`.
     If labels are not None, we infer the labels from the dict or
@@ -72,8 +76,8 @@ def gather_data(dconf, lconf, **kwargs):
     This function process the image data
     in the form of {class}_{id}.jpg in the
     train and test dataset.
-    :param args: Program argument object
-    :param sub_dirs: Internal sub directories
+    :param lconf: Config object for labels
+    :param dconf: Config object for directories
     """
     # First create the directories
     base_path = Path(dconf.base_dir)
@@ -88,6 +92,7 @@ def gather_data(dconf, lconf, **kwargs):
     label_info, labels = lconf
     label_type = label_info['type']
     if label_type is None:
+        # Labels are given None when the class label is present in the file name
         return _combined_image_labels(data_paths, dconf.img_type, labels=None, parser=parser)
     elif label_type.lower() == 'csv':
         pass
@@ -96,45 +101,65 @@ def gather_data(dconf, lconf, **kwargs):
         #     csv_file='data/label')
 
 
-# def split_and_store(dconf, dops, datafiles, is_val=False, shuffle=True, **kwargs):
-#     # train_files, test_files = datafiles
-#     filenames = {
-#         'test': datafiles[1],
-#         'train': datafiles[0]
-#     }
-#     output_dirs = ['train', 'test']
-#     if shuffle:
-#         random.seed(kwargs.get('seed', 42))
-#         random.shuffle(filenames['train'])
-#         random.shuffle(filenames['test'])
-#     if is_val:
-#         output_dirs.append('val')
-#         split_ratio = kwargs.get('split_ratio', 0.2)
-#         split = int((1-split_ratio) * len(filenames['train']))
-#         filenames['val'] = filenames['train'][split:]
-#         filenames['train'] = filenames['train'][:split]
-#     if dconf.output_dir is None:
-#         p = Path(dconf.base_dir + f'_{arg.dim}x{arg.dim}')
-#     else:
-#         p = Path(arg.output_dir)
-#     p.mkdir()
-#     for dirs in output_dirs:
-#         _p = p.joinpath(dirs)
-#         _p.mkdir()
-#         print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
-#         for filename in tqdm(filenames[dirs]):
-#             #print(filename)
-#             resize_and_save(filename, _p, size=arg.dim)
-#             # print(filename)
-#             # break
+def split_and_store(dconf, oconf, datafiles):
+    train_files, test_files = datafiles
+    filenames = {
+        'train': train_files,
+        'test': test_files
+    }
+    output_dirs = ['train', 'test']
+    if oconf.shuffle:
+        random.seed(oconf.seed)
+        random.shuffle(filenames['train'])
+        random.shuffle(filenames['test'])
+    if 0.0 < oconf.validation <= 1.0:
+        if oconf.validation > 0.5:
+            raise UserWarning('Validation frame is very large. Training may get affected')
+        output_dirs.append('val')
+        split_ratio = oconf.validation
+        split_point = int((1-split_ratio) * len(filenames['train']))
+        filenames['val'] = filenames['train'][split_point:]
+        filenames['train'] = filenames['train'][:split_point]
+    elif oconf.validation == 0.0:
+        # It's user's choice not to use any validation
+        pass
+    else:
+        raise ValueError('Prescribed validation range should be 0.0 to 0.5')
+    if oconf.resize < 0:
+        raise ValueError('Resize parameter can nor be zero')
+    elif oconf.resize == 0:
+        size = 'original'
+    else:
+        size = oconf.resize
+
+    if dconf.output_dir is None:
+        dir_name = f'data_{size}x{size}'
+        p = Path(dconf.base_dir, dir_name)
+    else:
+        p = Path(oconf.output_dir)
+
+    # Create the output directory
+    p.mkdir()
+
+    # for dirs in output_dirs:
+    #     _p = p.joinpath(dirs)
+    #     _p.mkdir()
+    #     print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
+    #     for filename in tqdm(filenames[dirs]):
+    #         #print(filename)
+    #         resize_and_save(filename, _p, size=arg.dim)
+    #         # print(filename)
+    #         # break
 
 
-# if __name__ == '__main__':
-#
-#     # parse the config file from the argparser
-#     arg = parser.parse_args()
-#     # Read the config file
-#     conf = Config(arg.config)
-#     # datafiles = gather_data(conf.dirs, conf.labels)
-#     # split_and_store(conf.dirs, conf.operations)
+if __name__ == '__main__':
+    #
+    #     # parse the config file from the argparser
+    #     arg = parser.parse_args()
+    from config import Config
+
+    #     # Read the config file
+    conf = Config(config_file='../config.yaml')
+    datafiles = gather_data(conf.dirs, conf.labels)
+    split_and_store(conf.dirs, conf.operations, datafiles)
 #     print("Done building dataset")

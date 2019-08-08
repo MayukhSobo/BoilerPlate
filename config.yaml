@@ -33,7 +33,7 @@ data:    # Define the data related behaviours
       type:
       path:
   ops:              # Operations for the dataset
-    validation: 0.2   # Give 0.0 for no validation
+    validation: 0.0   # Give 0.0 for no validation
     test: 0.0         # Give a separate value to create test data
     shuffle: True
     resize: 64        # Give 0 to not resize (Resize can help reduce the data size)
