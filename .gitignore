@@ -1,0 +1,6 @@
+data/SIGNS_dataset/
+data/SIGNS_dataset/*
+!data/.gitkeep
+__pycache__/
+test.py
+.idea/
