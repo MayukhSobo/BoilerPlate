@@ -1,0 +1,40 @@
+---
+name: Project Configurations (HAND signs)
+date: 2019-08-02
+type: Classification   # Mandatory field, (Classification, Regression, Generative)
+source: https://drive.google.com/file/d/1ufiR6hUKhXoAyiBNsySPkUwlvE_wfEHC/view?usp=sharing
+
+logging:  # Define the logging behaviours
+  verbose: True
+  log: False
+  log_dir: None
+
+data:    # Define the data related behaviours
+  dirs:
+    base_dir: /home/antpc/PycharmProjects/SIGNS/data
+    train_dir: SIGNS_dataset/train_signs
+    test_dir: SIGNS_dataset/test_signs
+    output_dir:    # Give some other path explicitly
+    img_type: jpg
+
+  labels:  # Labels for the dataset
+    mappings:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+      4: 4
+      5: 5
+      6: 6
+      7: 7
+      8: 8
+      9: 9
+    label_file:
+      type:
+      path:
+  ops:              # Operations for the dataset
+    validation: 0.2   # Give 0.0 for no validation
+    test: 0.0         # Give a separate value to create test data
+    shuffle: True
+    resize: 64        # Give 0 to not resize (Resize can help reduce the data size)
+    seed: 42
