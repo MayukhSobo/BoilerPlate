@@ -1,5 +1,6 @@
 data/SIGNS_dataset/
 data/SIGNS_dataset/*
+data/data_*
 !data/.gitkeep
 __pycache__/
 test.py

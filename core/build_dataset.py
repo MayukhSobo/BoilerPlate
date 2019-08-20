@@ -17,7 +17,7 @@ Because we don't have a lot of images and we want that the statistics on the val
 representative as possible, we'll take 20% of "train_signs" as val set.
 """
 
-import argparse
+from tqdm import tqdm
 import random
 from pathlib import Path
 from typing import (
@@ -34,49 +34,39 @@ from PIL import Image
 # parser.add_argument('--config', default='conf.yaml', help="Path to the config file")
 
 
-def resize_and_save(filename, output_dir, size):
-    """Resize the image contained in `filename` and save it to the `output_dir`"""
-    image = Image.open(filename)
+def resize_and_save(input_file: Path, output_file: Path, size: int):
+    """Resize the image contained in `input_file` and save it to the `output_file`"""
+    image = Image.open(input_file)
     # Use bilinear interpolation instead of the default "nearest neighbor" method
     image = image.resize((size, size), Image.BILINEAR)
-    image.save(output_dir.joinpath(filename.name))
+    image.save(output_file)
 
 
-def _combined_image_labels(data_dir: Iterator[Path],
-                           file_type: str,
-                           labels: Dict[str, int] = None,
-                           **kwargs) -> Tuple[List[Union[Path, Any]], ...]:
+def _get_image_paths(data_dir: Iterator[Path],
+                           file_type: str) -> Tuple[List[Union[Path, Any]], ...]:
     """
-    It combines the file ids and class labels according to `labels`.
-    If labels are not None, we infer the labels from the dict or
-    if None then we assume the labels are already existing.
+    It gets all the images from the directories mentioned by ```data_dir```
+
+    NOTE: It loads all the file names into the memory
+
+    :param data_dir: Path of train and test dataset
+    :param file_type: Type of images in the dataset
     """
     data = []
     for d in data_dir:
         files = []
         for f in d.iterdir():
             if f.name.lower().endswith(file_type):
-                if labels is None:
-                    files.append(f)
-                else:
-                    # Define your own file name parser with the labels
-                    # The accecpted format is {class_number}_{id}.{file_type}
-                    parser = kwargs.get('parser')
-                    files.append(parser(f, labels))
+                files.append(f)
         data.append(files)
     return tuple(data)
 
 
-def _csv_labeled_images(data):
-    pass
-
-
-def gather_data(dconf, lconf, **kwargs):
+def gather_data(dconf):
     """
     This function process the image data
     in the form of {class}_{id}.jpg in the
     train and test dataset.
-    :param lconf: Config object for labels
     :param dconf: Config object for directories
     """
     # First create the directories
@@ -87,21 +77,23 @@ def gather_data(dconf, lconf, **kwargs):
     for dp in data_paths:
         if not dp.exists():
             raise OSError(f'Can not find {dp}')
-    parser = kwargs.get('parser')
+    return _get_image_paths(data_paths, dconf.img_type)
+
+    # parser = kwargs.get('parser')
+    # label_info, labels = lconf
     # labels = kwargs.get('labels', None)
-    label_info, labels = lconf
-    label_type = label_info['type']
-    if label_type is None:
-        # Labels are given None when the class label is present in the file name
-        return _combined_image_labels(data_paths, dconf.img_type, labels=None, parser=parser)
-    elif label_type.lower() == 'csv':
-        pass
+    # label_type = label_info['type']
+    # if label_type is None:
+    #     # When the class labels are present in the file names itself
+    #     return _combined_image_labels(data_paths, dconf.img_type)
+    # elif label_type.lower() == 'csv':
+    #     pass
         # return _csv_labeled_images(
         #     data_paths, file_type,
         #     csv_file='data/label')
 
 
-def split_and_store(dconf, oconf, datafiles):
+def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
     train_files, test_files = datafiles
     filenames = {
         'train': train_files,
@@ -141,16 +133,19 @@ def split_and_store(dconf, oconf, datafiles):
     # Create the output directory
     p.mkdir()
 
-    # for dirs in output_dirs:
-    #     _p = p.joinpath(dirs)
-    #     _p.mkdir()
-    #     print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
-    #     for filename in tqdm(filenames[dirs]):
-    #         #print(filename)
-    #         resize_and_save(filename, _p, size=arg.dim)
-    #         # print(filename)
-    #         # break
-
+    if parser is None:
+        # The filename is in the right format already
+        parser = lambda x: x
+    for dirs in output_dirs:
+        # First create the sub-directories
+        _p = p.joinpath(dirs)
+        _p.mkdir()
+        print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
+        for input_file in tqdm(filenames[dirs]):
+            output_file = parser(input_file.name)
+            resize_and_save(input_file, _p.joinpath(output_file), size=oconf.resize)
+            # break
+        # break
 
 if __name__ == '__main__':
     #
@@ -160,6 +155,6 @@ if __name__ == '__main__':
 
     #     # Read the config file
     conf = Config(config_file='../config.yaml')
-    datafiles = gather_data(conf.dirs, conf.labels)
-    split_and_store(conf.dirs, conf.operations, datafiles)
+    datafiles = gather_data(conf.dirs)
+    split_and_store(conf.dirs, conf.operations, conf.labels, datafiles)
 #     print("Done building dataset")

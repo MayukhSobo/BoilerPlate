@@ -1,5 +1,5 @@
 from core.config import Config
-from core.build_dataset import gather_data
+from core import *
 import click
 
 
@@ -17,15 +17,8 @@ def main(ctx):
     type=click.Path(exists=True, resolve_path=True),
     help='Path to the config file that loads the configuration for the project'
 )
-@click.option(
-    '-s',
-    '--save',
-    type=click.Choice(['y', 'yes', 'n', 'no']),
-    default='y',
-    help='Mention if we need to process and save the image into a directory'
-)
 @click.pass_context
-def load(ctx, config_file, save):
+def load(ctx, config_file):
     """
     It loads the configuration files and process the data
     gathered from the data directories mentioned in the
@@ -37,9 +30,14 @@ def load(ctx, config_file, save):
     """
     conf_obj = ctx.obj['CONF']
     datafiles = _load(config_file, conf_obj=conf_obj)
-    print(save, type(save))
     # // TODO: Display the file stats if mentioned
-    # click.echo(datafiles)
+    print()
+    click.echo('*' * 50)
+    click.echo(f'Found {len(datafiles[0])} files for training')
+    click.echo(f'Found {len(datafiles[1])} files for testing')
+    click.echo('*' * 50)
+    print()
+
 
 
 def _load(config_file, **kwargs):
@@ -55,7 +53,7 @@ def _load(config_file, **kwargs):
         conf_obj = Config
     conf = conf_obj(config_file=config_file)
     # Get all path of the images for both training and testing
-    datafiles = gather_data(conf.dirs, conf.labels)
+    datafiles = gather_data(conf.dirs)
     return datafiles
 
 
