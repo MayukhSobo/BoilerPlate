@@ -29,14 +29,15 @@ def load(ctx, config_file):
     :return: None
     """
     conf_obj = ctx.obj['CONF']
-    datafiles = _load(config_file, conf_obj=conf_obj)
-    # // TODO: Display the file stats if mentioned
+    conf, datafiles = _load(config_file, conf_obj=conf_obj)
     print()
     click.echo('*' * 50)
     click.echo(f'Found {len(datafiles[0])} files for training')
     click.echo(f'Found {len(datafiles[1])} files for testing')
     click.echo('*' * 50)
     print()
+    _save_and_store(conf, datafiles, parser)
+    # // TODO: Display the file stats if mentioned
 
 
 
@@ -54,7 +55,15 @@ def _load(config_file, **kwargs):
     conf = conf_obj(config_file=config_file)
     # Get all path of the images for both training and testing
     datafiles = gather_data(conf.dirs)
-    return datafiles
+    return conf, datafiles
+
+def _save_and_store(conf, datafiles, parser):
+    # split and store all the data into separate directories
+    split_and_store(dconf=conf.dirs,
+                    oconf=conf.operations,
+                    lconf=conf.labels,
+                    datafiles=datafiles,
+                    parser=parser)
 
 
 if __name__ == '__main__':

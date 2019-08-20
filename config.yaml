@@ -37,5 +37,5 @@ data:                 # Define the data related behaviours
     # Use this only when you dont have seperate test dataset.
     test: 0.0         # Give a separate value to create test data
     shuffle: True
-    resize: 64        # Give 0 to not resize (Resize can help reduce the data size)
+    resize: 80        # Give 0 to not resize (Resize can help reduce the data size)
     seed: 42

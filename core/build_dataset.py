@@ -133,16 +133,16 @@ def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
     # Create the output directory
     p.mkdir()
 
-    if parser is None:
-        # The filename is in the right format already
-        parser = lambda x: x
+    # if parser is None:
+    #     # The filename is in the right format already
+    #     parser = lambda x: x
     for dirs in output_dirs:
         # First create the sub-directories
         _p = p.joinpath(dirs)
         _p.mkdir()
         print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
         for input_file in tqdm(filenames[dirs]):
-            output_file = parser(input_file.name)
+            output_file = parser(input_file.name, dconf.img_type)
             resize_and_save(input_file, _p.joinpath(output_file), size=oconf.resize)
             # break
         # break
