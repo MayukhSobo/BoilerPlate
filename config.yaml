@@ -11,9 +11,9 @@ logging:              # Define the logging behaviours
 
 data:                 # Define the data related behaviours
   dirs:
-    base_dir: /home/antpc/PycharmProjects/SIGNS/data
-    train_dir: SIGNS_dataset/train_signs
-    test_dir: SIGNS_dataset/test_signs
+    base_dir: /Users/bis/Documents/Abhishek/BoilerPlate/data
+    train_dir: dog-breed-identification/train
+    test_dir:
     output_dir:       # Give some other path explicitly
     img_type: jpg
 
@@ -30,12 +30,15 @@ data:                 # Define the data related behaviours
       8: 8
       9: 9
     label_file:
-      type:
-      path:
+      type: csv
+      path: dog-breed-identification/labels.csv
+      id_column: id
+      target_column: breed
+
   ops:                # Operations for the dataset
-    validation: 0.3   # Give 0.0 for no validation
+    validation: 0.2   # Give 0.0 for no validation
     # Use this only when you dont have seperate test dataset.
-    test: 0.0         # Give a separate value to create test data
+    test: 0.2         # Give a separate value to create test data
     shuffle: True
     resize: 80        # Give 0 to not resize (Resize can help reduce the data size)
     seed: 42
