@@ -3,11 +3,13 @@ from .build_dataset import (
     gather_data, split_and_store
 )
 import re
+
+
 # -----------------  Define your parser here ----------------- #
 
 # parser = lambda x: x
 
-def parser(x: str, image_type: str) -> str:
+def parser(x: str, image_type: str, mapping) -> str:
     """
     Converts the string name into the required form
     :param x: file name
@@ -16,13 +18,14 @@ def parser(x: str, image_type: str) -> str:
     """
     regex = rf"([0-9])_IMG_(\d+).*\.({image_type})"
     matches = re.match(regex, x)
-    return "{}_{}.{}".format(*matches.groups())
+    label, fid, ext = matches.groups()
+    return "{}_{}.{}".format(mapping[label], fid, ext)
 
-#--------------------------------------------------------------#
+
+# --------------------------------------------------------------#
 
 __all__ = [
     'gather_data',
     'split_and_store',
     'parser'
 ]
-
