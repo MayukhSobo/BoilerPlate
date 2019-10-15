@@ -30,6 +30,7 @@ from typing import (
 from PIL import Image
 
 import sys
+# import time
 
 # import click
 
@@ -37,7 +38,7 @@ import sys
 # parser.add_argument('--config', default='conf.yaml', help="Path to the config file")
 
 
-def resize_and_save(input_file: Path, output_file: Path, size: int):
+def _resize_and_save(input_file: Path, output_file: Path, size: int):
     """Resize the image contained in `input_file` and save it to the `output_file`"""
     image = Image.open(input_file)
     # Use bilinear interpolation instead of the default "nearest neighbor" method
@@ -97,7 +98,26 @@ def gather_data(dconf):
     #     csv_file='data/label')
 
 
-def get_id_label_mapping(base_dir, label_type):
+def format_n_save(base_output, output_dirs, filenames, label_type, **kwargs):
+    for dirs in output_dirs:
+        # First create the sub-directories
+        _p = base_output.joinpath(dirs)
+        if not path.exists(_p):
+            _p.mkdir()
+        # print(f"\nProcessing {dirs} data, saving preprocessed data to {_p.resolve()}")
+        mapping = kwargs.get('map')
+        for input_file in tqdm(filenames[dirs], file=sys.stdout,
+                               desc='Processing ' + dirs + ' dataset'):
+            if label_type is None:
+                img_type = kwargs.get('img_type')
+                parser = kwargs.get('parser')
+                output_dirs = parser(input_file.name, img_type, mapping)
+            elif label_type == 'csv':
+                output_dirs = f"{mapping[input_file.stem]}_{input_file.name}"
+            # _resize_and_save(input_file, _p.joinpath(output_file), size=oconf.resize)
+
+
+def _get_id_label_mapping(base_dir, label_type):
     id_label_map = {}
     csvPath = Path(base_dir, label_type['path'])
     if not csvPath.exists():
@@ -158,12 +178,11 @@ def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
             split_point = int((1 - split_ratio) * len(filenames['train']))
             filenames['test'] = filenames['train'][split_point:]
             filenames['train'] = filenames['train'][:split_point]
-            pass
     elif not filenames['test']:
         if oconf.test <= 0.0 or oconf.test > 1.0:
-            raise ValueError('Test data is originally not present in the dataset')
+            raise ValueError('Test data is not present in the dataset')
     if oconf.resize < 0:
-        raise ValueError('\'Resize\' parameter can not be less than zero')
+        raise ValueError('Resize parameter can nor be zero')
     elif oconf.resize == 0:
         size = 'original'
     else:
@@ -185,30 +204,18 @@ def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
 
     ltype, mapping = lconf
     if ltype['type'] == 'csv':
-        id_label_map = get_id_label_mapping(dconf.base_dir, ltype)
-
-    for dirs in output_dirs:
-        # First create the sub-directories
-        _p = p.joinpath(dirs)
-        if not path.exists(_p):
-            _p.mkdir()
-        # print(f"Processing {dirs} data, saving preprocessed data to {_p.resolve()}")
-        for input_file in tqdm(filenames[dirs], file=sys.stdout, desc='Processing ' + dirs + ' dataset'):
-            if ltype['type'] is None:
-                output_file = parser(input_file.name, dconf.img_type, mapping)
-            else:
-                output_file = f"{id_label_map[input_file.stem]}_{input_file.name}"
-
-            # resize_and_save(input_file, _p.joinpath(output_file), size=oconf.resize)
-            # break
-        # break
+        id_label_map = _get_id_label_mapping(dconf.base_dir, ltype)
+        format_n_save(p, output_dirs, filenames, 'csv', map=id_label_map)
+    elif ltype['type'] is None:
+        format_n_save(p, output_dirs, filenames, None, parser=parser, map=mapping, img_type=dconf.img_type)
 
 
 if __name__ == '__main__':
     from core.config import Config
-
-    #     # Read the config file
+    from core import *
+    # Read the config file
     conf = Config(config_file='../config.yaml')
     datafiles = gather_data(conf.dirs)
-    split_and_store(conf.dirs, conf.operations, conf.labels, datafiles)
+    split_and_store(conf.dirs, conf.operations, conf.labels, datafiles, parser=parser)
+    # print(" ", file=sys.stderr)
     print("Done building dataset")
