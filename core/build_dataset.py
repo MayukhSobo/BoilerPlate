@@ -41,7 +41,7 @@ import sys
 def _resize_and_save(input_file: Path, output_file: Path, size: int):
     """Resize the image contained in `input_file` and save it to the `output_file`"""
     image = Image.open(input_file)
-    # Use bilinear interpolation instead of the default "nearest neighbor" method
+    # Use bi-linear interpolation instead of the default "nearest neighbor" method
     image = image.resize((size, size), Image.BILINEAR)
     image.save(output_file)
 
@@ -99,38 +99,38 @@ def gather_data(dconf):
 
 
 def format_n_save(base_output, output_dirs, filenames, label_type, **kwargs):
+    mapping = kwargs.get('map')
+    resize = kwargs.get('resize')
+    parser = kwargs.get('parser')
+    img_type = kwargs.get('img_type')
     for dirs in output_dirs:
         # First create the sub-directories
         _p = base_output.joinpath(dirs)
         if not path.exists(_p):
             _p.mkdir()
-        # print(f"\nProcessing {dirs} data, saving preprocessed data to {_p.resolve()}")
-        mapping = kwargs.get('map')
-        for input_file in tqdm(filenames[dirs], file=sys.stdout,
-                               desc='Processing ' + dirs + ' dataset'):
+        print(f"\nProcessing {dirs} data, saving preprocessed data to {_p.resolve()}")
+        for input_file in tqdm(filenames[dirs], file=sys.stdout, desc='Processing ' + dirs + ' dataset'):
             if label_type is None:
-                img_type = kwargs.get('img_type')
-                parser = kwargs.get('parser')
-                output_dirs = parser(input_file.name, img_type, mapping)
+                output_file = parser(input_file.name, img_type, mapping)
             elif label_type == 'csv':
-                output_dirs = f"{mapping[input_file.stem]}_{input_file.name}"
-            # _resize_and_save(input_file, _p.joinpath(output_file), size=oconf.resize)
+                output_file = f"{mapping[input_file.stem]}_{input_file.name}"
+            _resize_and_save(input_file, _p.joinpath(output_file), size=resize)
 
 
 def _get_id_label_mapping(base_dir, label_type):
     id_label_map = {}
-    csvPath = Path(base_dir, label_type['path'])
-    if not csvPath.exists():
+    csvpath = Path(base_dir, label_type['path'])
+    if not csvpath.exists():
         raise FileNotFoundError("CSV file can not be found")
     else:
         target = set()
-        with open(csvPath, 'r', encoding='utf8') as csvfile:
+        with open(csvpath, 'r', encoding='utf8') as csvfile:
             csvreader = csv.DictReader(csvfile)
             for row in csvreader:
                 target.add(row[label_type['target_column']])
         target_label_map = dict(zip(target, np.arange(len(target))))
 
-        with open(csvPath, 'r', encoding='utf8') as csvfile:
+        with open(csvpath, 'r', encoding='utf8') as csvfile:
             csvreader = csv.DictReader(csvfile)
             for row in csvreader:
                 id_label_map[row[label_type['id_column']]] = target_label_map[row[label_type['target_column']]]
@@ -205,9 +205,10 @@ def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
     ltype, mapping = lconf
     if ltype['type'] == 'csv':
         id_label_map = _get_id_label_mapping(dconf.base_dir, ltype)
-        format_n_save(p, output_dirs, filenames, 'csv', map=id_label_map)
+        format_n_save(p, output_dirs, filenames, 'csv', map=id_label_map, resize=oconf.resize)
     elif ltype['type'] is None:
-        format_n_save(p, output_dirs, filenames, None, parser=parser, map=mapping, img_type=dconf.img_type)
+        format_n_save(p, output_dirs, filenames, None, map=mapping, resize=oconf.resize,
+                      parser=parser, img_type=dconf.img_type)
 
 
 if __name__ == '__main__':
@@ -217,5 +218,4 @@ if __name__ == '__main__':
     conf = Config(config_file='../config.yaml')
     datafiles = gather_data(conf.dirs)
     split_and_store(conf.dirs, conf.operations, conf.labels, datafiles, parser=parser)
-    # print(" ", file=sys.stderr)
-    print("Done building dataset")
+    print("\nDone building dataset")
