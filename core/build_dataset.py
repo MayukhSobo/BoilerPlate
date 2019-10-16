@@ -1,6 +1,6 @@
-"""Split the SIGNS dataset into train/val/test and resize images to 64x64.
+"""Split the SIGNS_dataset into train/val/test and resize images to 64x64.
 ​
-The SIGNS dataset comes into the following format:
+The SIGNS_dataset comes into the following format:
     train_signs/
         0_IMG_5864.jpg
         ...
@@ -21,6 +21,7 @@ from tqdm import tqdm
 import random
 import csv
 import numpy as np
+from glob import glob
 from os import path
 from pathlib import Path
 from typing import (
@@ -46,8 +47,7 @@ def _resize_and_save(input_file: Path, output_file: Path, size: int):
     image.save(output_file)
 
 
-def _get_image_paths(data_dir: Iterator[Path],
-                     file_type: str) -> Tuple[List[Union[Path, Any]], ...]:
+def _get_image_paths(data_dir: List[Path], file_type: str, ltype: dict):
     """
     It gets all the images from the directories mentioned by ```data_dir```
 
@@ -56,6 +56,17 @@ def _get_image_paths(data_dir: Iterator[Path],
     :param data_dir: Path of train and test dataset
     :param file_type: Type of images in the dataset
     """
+    if ltype['type'] == 'folder':
+        data = []
+        labels = set()
+        files = []
+        for f in glob(str(data_dir[0])+f"/*/*.{file_type}"):
+            f = Path(f)
+            labels.add(f.parent.name)
+            files.append(f)
+        data.append(files)
+        target_label_map = dict(zip(labels, np.arange(len(labels))))
+        return tuple(data), target_label_map
     data = []
     for d in data_dir:
         files = []
@@ -64,15 +75,16 @@ def _get_image_paths(data_dir: Iterator[Path],
                 files.append(f)
         # print(files)
         data.append(files)
-    return tuple(data)
+    return tuple(data), None
 
 
-def gather_data(dconf):
+def gather_data(dconf, ltype):
     """
     This function process the image data
     in the form of {class}_{id}.jpg in the
     train and test dataset.
     :param dconf: Config object for directories
+    :param ltype: Label type of the dataset (eg. csv, folder etc.)
     """
     # First create the directories
     base_path = Path(dconf.base_dir)
@@ -83,7 +95,7 @@ def gather_data(dconf):
     for dp in data_paths:
         if not dp.exists():
             raise OSError(f'Can not find {dp}')
-    return _get_image_paths(data_paths, dconf.img_type)
+    return _get_image_paths(data_paths, dconf.img_type, ltype)
 
     # parser = kwargs.get('parser')
     # label_info, labels = lconf
@@ -115,6 +127,8 @@ def format_n_save(base_output, output_dirs, filenames, label_type, **kwargs):
                 output_file = parser(input_file.name, img_type, mapping)
             elif label_type == 'csv':
                 output_file = f"{mapping[input_file.stem]}_{input_file.name}"
+            elif label_type == 'folder':
+                output_file = f"{mapping[input_file.parent.name]}_{input_file.name}"
             _resize_and_save(input_file, _p.joinpath(output_file), size=resize)
 
 
@@ -204,7 +218,10 @@ def split_and_store(dconf, oconf, lconf, datafiles, parser=None, **kwargs):
     #     parser = lambda x: x
 
     ltype, mapping = lconf
-    if ltype['type'] == 'csv':
+    if ltype['type'] == 'folder':
+        target_label_map = kwargs.get('folder_label_map')
+        format_n_save(p, output_dirs, filenames, 'folder', map=target_label_map, resize=oconf.resize)
+    elif ltype['type'] == 'csv':
         id_label_map = _get_id_label_mapping(dconf.base_dir, ltype)
         format_n_save(p, output_dirs, filenames, 'csv', map=id_label_map, resize=oconf.resize)
     elif ltype['type'] is None:
@@ -217,6 +234,7 @@ if __name__ == '__main__':
     from core import *
     # Read the config file
     conf = Config(config_file='../config.yaml')
-    datafiles = gather_data(conf.dirs)
-    split_and_store(conf.dirs, conf.operations, conf.labels, datafiles, parser=parser)
+    datafiles, folder_label_map = gather_data(conf.dirs, conf.labels[0])
+    split_and_store(conf.dirs, conf.operations, conf.labels, datafiles, parser=parser,
+                    folder_label_map=folder_label_map)
     print("\nDone building dataset")
