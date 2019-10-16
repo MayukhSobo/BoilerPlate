@@ -78,6 +78,7 @@ def gather_data(dconf):
     base_path = Path(dconf.base_dir)
     sub_dirs = (dconf.train_dir, dconf.test_dir)
     data_paths = list(filter(None, map(lambda x: base_path.joinpath(x) if x is not None else x, sub_dirs)))
+    # print(data_paths)
     # Validate if they exists or not
     for dp in data_paths:
         if not dp.exists():
@@ -114,7 +115,7 @@ def format_n_save(base_output, output_dirs, filenames, label_type, **kwargs):
                 output_file = parser(input_file.name, img_type, mapping)
             elif label_type == 'csv':
                 output_file = f"{mapping[input_file.stem]}_{input_file.name}"
-            _resize_and_save(input_file, _p.joinpath(output_file), size=resize)
+            # _resize_and_save(input_file, _p.joinpath(output_file), size=resize)
 
 
 def _get_id_label_mapping(base_dir, label_type):
